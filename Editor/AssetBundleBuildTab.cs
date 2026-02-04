@@ -3,7 +3,7 @@ using UnityEngine;
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.Serialization.Formatters.Binary;
-
+using UnityEditor.SceneManagement;
 using AssetBundleBrowser.AssetBundleDataSource;
 using AssetBundleBrowser.Imposter;
 
@@ -51,6 +51,7 @@ namespace AssetBundleBrowser
         private BuildTabData m_UserData;
 
         List<ToggleData> m_ToggleData;
+        ToggleData m_SaveScenes;
         ToggleData m_ForceRebuild;
         ToggleData m_CopyToStreaming;
         GUIContent m_TargetContent;
@@ -125,6 +126,11 @@ namespace AssetBundleBrowser
                 BuildAssetBundleOptions.ForceRebuildAssetBundle));
             m_ToggleData.Add(new ToggleData(
                 false,
+                "Save All Open Scenes",
+                "Saves all currently open scenes using EditorSceneManager.SaveOpenScenes() before building asset bundles.",
+                m_UserData.m_OnToggles));
+            m_ToggleData.Add(new ToggleData(
+                false,
                 "Ignore Type Tree Changes",
                 "Ignore the type tree changes when doing the incremental build check.",
                 m_UserData.m_OnToggles,
@@ -147,8 +153,6 @@ namespace AssetBundleBrowser
                 "Do a dry run build.",
                 m_UserData.m_OnToggles,
                 BuildAssetBundleOptions.DryRunBuild));
-
-
             m_ForceRebuild = new ToggleData(
                 false,
                 "Clear Folders",
@@ -241,6 +245,8 @@ namespace AssetBundleBrowser
                         m_UserData.m_OnToggles.Remove(m_CopyToStreaming.content.text);
                     m_CopyToStreaming.state = newState;
                 }
+                
+
             }
 
             // advanced options
@@ -356,6 +362,17 @@ namespace AssetBundleBrowser
                 m_InspectTab.AddBundleFolder(buildInfo.outputDirectory);
                 m_InspectTab.RefreshBundles();
             };
+            
+            var saveScenesToggle = m_ToggleData.Find(t => t.content.text == "Save All Open Scenes");
+            if (saveScenesToggle != null && saveScenesToggle.state)
+            {
+                if (!EditorSceneManager.SaveOpenScenes())
+                {
+                    Debug.LogError("Failed to save one or more open scenes. Aborting build.");
+                    return;
+                }
+            }
+
 
             ImposterBuilder.BuildAssetBundles(buildInfo, AssetBundleModel.Model.DataSource);
 
